@@ -1,14 +1,15 @@
 #include "QtCodeSnippet.h"
 
 #include <QBoxLayout>
-#include <qmenu.h>
 #include <QPushButton>
+#include <QStyle>
+#include <qmenu.h>
 
 #include "MessageShowScope.h"
 
-#include "SourceLocationFile.h"
-#include "QtCodeNavigator.h"
 #include "QtCodeFile.h"
+#include "QtCodeNavigator.h"
+#include "SourceLocationFile.h"
 
 QtCodeSnippet::QtCodeSnippet(const CodeSnippetParams& params, QtCodeNavigator* navigator, QtCodeFile* file)
 	: QFrame(file)
@@ -33,7 +34,7 @@ QtCodeSnippet::QtCodeSnippet(const CodeSnippetParams& params, QtCodeNavigator* n
 	if (!m_titleString.empty() && !params.isOverview)
 	{
 		m_title = createScopeLine(layout);
-		if (m_titleId == 0) // title is a file path
+		if (m_titleId == 0)	   // title is a file path
 		{
 			m_title->setText(QString::fromStdWString(FilePath(m_titleString).fileName()));
 		}
@@ -44,13 +45,14 @@ QtCodeSnippet::QtCodeSnippet(const CodeSnippetParams& params, QtCodeNavigator* n
 		connect(m_title, &QPushButton::clicked, this, &QtCodeSnippet::clickedTitle);
 	}
 
-	m_codeArea = new QtCodeArea(params.startLineNumber, params.code, params.locationFile, navigator, !params.isOverview, this);
+	m_codeArea = new QtCodeArea(
+		params.startLineNumber, params.code, params.locationFile, navigator, !params.isOverview, this);
 	layout->addWidget(m_codeArea);
 
 	if (!m_footerString.empty())
 	{
 		m_footer = createScopeLine(layout);
-		if (m_footerId == 0) // footer is a file path
+		if (m_footerId == 0)	// footer is a file path
 		{
 			m_footer->setText(QString::fromStdWString(FilePath(m_footerString).fileName()));
 		}
@@ -62,9 +64,7 @@ QtCodeSnippet::QtCodeSnippet(const CodeSnippetParams& params, QtCodeNavigator* n
 	}
 }
 
-QtCodeSnippet::~QtCodeSnippet()
-{
-}
+QtCodeSnippet::~QtCodeSnippet() {}
 
 QtCodeFile* QtCodeSnippet::getFile() const
 {
@@ -108,6 +108,26 @@ void QtCodeSnippet::updateContent()
 {
 	m_codeArea->updateContent();
 	updateDots();
+
+	if (m_title)
+	{
+		bool focus = m_title == m_navigator->getFocus().scopeLine;
+		if (focus != m_title->property("focused").toBool())
+		{
+			m_title->setProperty("focused", focus);
+			m_title->style()->polish(m_title);	  // recomputes style to make property take effect
+		}
+	}
+
+	if (m_footer)
+	{
+		bool focus = m_footer == m_navigator->getFocus().scopeLine;
+		if (focus != m_footer->property("focused").toBool())
+		{
+			m_footer->setProperty("focused", focus);
+			m_footer->style()->polish(m_footer);	// recomputes style to make property take effect
+		}
+	}
 }
 
 void QtCodeSnippet::setIsActiveFile(bool isActiveFile)
@@ -146,9 +166,82 @@ std::string QtCodeSnippet::getCode() const
 	return m_codeArea->getCode();
 }
 
-void QtCodeSnippet::findScreenMatches(const std::wstring& query, std::vector<std::pair<QtCodeArea*, Id>>* screenMatches)
+void QtCodeSnippet::findScreenMatches(
+	const std::wstring& query, std::vector<std::pair<QtCodeArea*, Id>>* screenMatches)
 {
 	m_codeArea->findScreenMatches(query, screenMatches);
+}
+
+bool QtCodeSnippet::hasFocus(const CodeFocusHandler::Focus& focus) const
+{
+	return m_codeArea == focus.area;
+}
+
+bool QtCodeSnippet::setFocus(Id locationId)
+{
+	return m_codeArea->setFocus(locationId);
+}
+
+bool QtCodeSnippet::moveFocus(const CodeFocusHandler::Focus& focus, CodeFocusHandler::Direction direction)
+{
+	if (m_codeArea == focus.area)
+	{
+		if (focus.scopeLine)
+		{
+			if (m_title == focus.scopeLine && direction == CodeFocusHandler::Direction::DOWN)
+			{
+				return m_codeArea->moveFocus(direction, m_codeArea->getStartLineNumber() - 1, 0);
+			}
+			else if (m_footer == focus.scopeLine && direction == CodeFocusHandler::Direction::UP)
+			{
+				return m_codeArea->moveFocus(direction, m_codeArea->getEndLineNumber() + 1, 0);
+			}
+		}
+		else
+		{
+			bool moved = m_codeArea->moveFocus(direction, focus.lineNumber, focus.locationId);
+			if (!moved)
+			{
+				if (m_title && direction == CodeFocusHandler::Direction::UP)
+				{
+					m_navigator->setFocusedScopeLine(m_codeArea, m_title);
+					return true;
+				}
+				else if (m_footer && direction == CodeFocusHandler::Direction::DOWN)
+				{
+					m_navigator->setFocusedScopeLine(m_codeArea, m_footer);
+					return true;
+				}
+			}
+			return moved;
+		}
+	}
+	return false;
+}
+
+void QtCodeSnippet::focusTop()
+{
+	if (m_title)
+	{
+		m_navigator->setFocusedScopeLine(m_codeArea, m_title);
+	}
+	else
+	{
+		m_codeArea->moveFocus(
+			CodeFocusHandler::Direction::DOWN, m_codeArea->getStartLineNumber() - 1, 0);
+	}
+}
+
+void QtCodeSnippet::focusBottom()
+{
+	if (m_footer)
+	{
+		m_navigator->setFocusedScopeLine(m_codeArea, m_footer);
+	}
+	else
+	{
+		m_codeArea->moveFocus(CodeFocusHandler::Direction::UP, m_codeArea->getEndLineNumber() + 1, 0);
+	}
 }
 
 void QtCodeSnippet::ensureLocationIdVisible(Id locationId, bool animated)
@@ -190,14 +283,14 @@ QPushButton* QtCodeSnippet::createScopeLine(QBoxLayout* layout)
 
 	QPushButton* dots = new QPushButton(this);
 	dots->setObjectName("dots");
-	dots->setAttribute(Qt::WA_LayoutUsesWidgetRect); // fixes layouting on Mac
+	dots->setAttribute(Qt::WA_LayoutUsesWidgetRect);	// fixes layouting on Mac
 	lineLayout->addWidget(dots);
 	m_dots.push_back(dots);
 
 	QPushButton* line = new QPushButton(this);
 	line->setObjectName("scope_name");
-	line->minimumSizeHint(); // force font loading
-	line->setAttribute(Qt::WA_LayoutUsesWidgetRect); // fixes layouting on Mac
+	line->minimumSizeHint();							// force font loading
+	line->setAttribute(Qt::WA_LayoutUsesWidgetRect);	// fixes layouting on Mac
 	line->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 	lineLayout->addWidget(line);
 
@@ -206,7 +299,7 @@ QPushButton* QtCodeSnippet::createScopeLine(QBoxLayout* layout)
 
 void QtCodeSnippet::updateDots()
 {
-	for (QPushButton* dots : m_dots)
+	for (QPushButton* dots: m_dots)
 	{
 		dots->setText(QString::fromStdString(std::string(lineNumberDigits(), '.')));
 		dots->setMinimumWidth(m_codeArea->lineNumberAreaWidth());

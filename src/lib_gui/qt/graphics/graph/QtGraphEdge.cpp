@@ -1,26 +1,27 @@
 #include "QtGraphEdge.h"
 
 #include <QCursor>
-#include <QGraphicsSceneEvent>
 #include <QGraphicsItemGroup>
+#include <QGraphicsSceneEvent>
 
-#include "GraphViewStyle.h"
 #include "Edge.h"
-#include "TokenComponentAggregation.h"
-#include "TokenComponentInheritanceChain.h"
-#include "TokenComponentIsAmbiguous.h"
-#include "QtLineItemAngled.h"
-#include "QtLineItemBezier.h"
-#include "QtLineItemStraight.h"
-#include "QtGraphNode.h"
+#include "GraphFocusHandler.h"
+#include "GraphViewStyle.h"
 #include "MessageActivateEdge.h"
 #include "MessageActivateTrailEdge.h"
 #include "MessageFocusIn.h"
 #include "MessageFocusOut.h"
 #include "MessageGraphNodeBundleSplit.h"
 #include "MessageGraphNodeHide.h"
-#include "MessageTooltipShow.h"
 #include "MessageTooltipHide.h"
+#include "MessageTooltipShow.h"
+#include "QtGraphNode.h"
+#include "QtLineItemAngled.h"
+#include "QtLineItemBezier.h"
+#include "QtLineItemStraight.h"
+#include "TokenComponentAggregation.h"
+#include "TokenComponentInheritanceChain.h"
+#include "TokenComponentIsAmbiguous.h"
 #include "utility.h"
 
 QtGraphEdge* QtGraphEdge::s_focusedEdge = nullptr;
@@ -30,11 +31,12 @@ void QtGraphEdge::unfocusBezierEdge()
 {
 	if (s_focusedBezierEdge)
 	{
-		s_focusedBezierEdge->focusOut();
+		s_focusedBezierEdge->coFocusOut();
 	}
 }
 
 QtGraphEdge::QtGraphEdge(
+	GraphFocusHandler* focusHandler,
 	QtGraphNode* owner,
 	QtGraphNode* target,
 	const Edge* data,
@@ -42,22 +44,16 @@ QtGraphEdge::QtGraphEdge(
 	bool isActive,
 	bool isInteractive,
 	bool horizontal,
-	TokenComponentAggregation::Direction direction
-)
-	: m_data(data)
+	TokenComponentAggregation::Direction direction)
+	: m_focusHandler(focusHandler)
+	, m_data(data)
 	, m_owner(owner)
 	, m_target(target)
-	, m_child(nullptr)
 	, m_isActive(isActive)
-	, m_isFocused(false)
 	, m_isHorizontal(horizontal)
 	, m_weight(weight)
 	, m_direction(direction)
-	, m_isTrailEdge(false)
-	, m_useBezier(false)
 	, m_isInteractive(isInteractive)
-	, m_mousePos(0.0f, 0.0f)
-	, m_mouseMoved(false)
 {
 	this->setCursor(Qt::PointingHandCursor);
 
@@ -72,9 +68,7 @@ QtGraphEdge::QtGraphEdge(
 	s_focusedBezierEdge = nullptr;
 }
 
-QtGraphEdge::~QtGraphEdge()
-{
-}
+QtGraphEdge::~QtGraphEdge() {}
 
 const Edge* QtGraphEdge::getData() const
 {
@@ -107,8 +101,8 @@ void QtGraphEdge::updateLine()
 	const QtGraphNode* target = m_target;
 
 	Edge::EdgeType type = (getData() ? getData()->getType() : Edge::EDGE_AGGREGATION);
-	GraphViewStyle::EdgeStyle style =
-		GraphViewStyle::getStyleForEdgeType(type, m_isActive | m_isFocused, false, m_isTrailEdge, isAmbiguous());
+	GraphViewStyle::EdgeStyle style = GraphViewStyle::getStyleForEdgeType(
+		type, m_isActive | m_isCoFocused, m_isFocused, m_isTrailEdge, isAmbiguous());
 
 	Vec4i ownerRect = owner->getBoundingRect();
 	Vec4i targetRect = target->getBoundingRect();
@@ -133,11 +127,12 @@ void QtGraphEdge::updateLine()
 		targetParentRect = targetParent->getBoundingRect();
 	}
 
-	QtLineItemBase::Route route = m_isHorizontal ? QtLineItemBase::ROUTE_HORIZONTAL : QtLineItemBase::ROUTE_VERTICAL;
+	QtLineItemBase::Route route = m_isHorizontal ? QtLineItemBase::ROUTE_HORIZONTAL
+												 : QtLineItemBase::ROUTE_VERTICAL;
 
 	if (m_useBezier)
 	{
-		for (QGraphicsItem* item : childItems())
+		for (QGraphicsItem* item: childItems())
 		{
 			item->hide();
 			item->setParentItem(nullptr);
@@ -146,7 +141,7 @@ void QtGraphEdge::updateLine()
 		style.originOffset.y() = 0;
 		style.targetOffset.y() = 0;
 
-		for (const Vec4i& rect : m_path)
+		for (const Vec4i& rect: m_path)
 		{
 			QtLineItemBezier* bezier = new QtLineItemBezier(this);
 			bezier->updateLine(ownerRect, rect, ownerParentRect, rect, style, m_weight, false);
@@ -155,11 +150,17 @@ void QtGraphEdge::updateLine()
 			QtLineItemStraight* line = new QtLineItemStraight(this);
 			if (route == QtLineItemBase::ROUTE_HORIZONTAL)
 			{
-				line->updateLine(Vec2i(rect.x(), (rect.y() + rect.w()) / 2), Vec2i(rect.z(), (rect.y() + rect.w()) / 2), style);
+				line->updateLine(
+					Vec2i(rect.x(), (rect.y() + rect.w()) / 2),
+					Vec2i(rect.z(), (rect.y() + rect.w()) / 2),
+					style);
 			}
 			else
 			{
-				line->updateLine(Vec2i((rect.x() + rect.z()) / 2, rect.y()), Vec2i((rect.x() + rect.z()) / 2, rect.w()), style);
+				line->updateLine(
+					Vec2i((rect.x() + rect.z()) / 2, rect.y()),
+					Vec2i((rect.x() + rect.z()) / 2, rect.w()),
+					style);
 			}
 
 			ownerRect = rect;
@@ -169,7 +170,9 @@ void QtGraphEdge::updateLine()
 		bool showArrow = m_direction != TokenComponentAggregation::DIRECTION_NONE;
 
 		QtLineItemBezier* bezier = new QtLineItemBezier(this);
-		bezier->updateLine(ownerRect, targetRect, ownerParentRect, targetParentRect, style, m_weight, showArrow);
+		m_child = bezier;
+		bezier->updateLine(
+			ownerRect, targetRect, ownerParentRect, targetParentRect, style, m_weight, showArrow);
 		bezier->setRoute(route);
 
 		if (ownerNonGroupParent == targetNonGroupParent)
@@ -221,7 +224,8 @@ void QtGraphEdge::updateLine()
 
 			if (ownerNonGroupParent == targetNonGroupParent ||
 				(type == Edge::EDGE_OVERRIDE &&
-					targetParentRect.z() + style.targetOffset.x + style.originOffset.x > ownerParentRect.x()))
+				 targetParentRect.z() + style.targetOffset.x + style.originOffset.x >
+					 ownerParentRect.x()))
 			{
 				child->setOnFront(true);
 			}
@@ -240,8 +244,10 @@ void QtGraphEdge::updateLine()
 				style.zValue += 5;
 			}
 		}
-		else if (type == Edge::EDGE_INHERITANCE || (type == Edge::EDGE_TEMPLATE_SPECIALIZATION &&
-				owner == ownerNonGroupParent && target == targetNonGroupParent))
+		else if (
+			type == Edge::EDGE_INHERITANCE ||
+			(type == Edge::EDGE_TEMPLATE_SPECIALIZATION && owner == ownerNonGroupParent &&
+			 target == targetNonGroupParent))
 		{
 			route = QtLineItemBase::ROUTE_VERTICAL;
 
@@ -250,8 +256,7 @@ void QtGraphEdge::updateLine()
 				child->setEarlyBend(true);
 			}
 		}
-		else if (type != Edge::EDGE_AGGREGATION ||
-			owner != ownerNonGroupParent || target != targetNonGroupParent)
+		else if (type != Edge::EDGE_AGGREGATION || owner != ownerNonGroupParent || target != targetNonGroupParent)
 		{
 			route = QtLineItemBase::ROUTE_HORIZONTAL;
 		}
@@ -266,14 +271,16 @@ void QtGraphEdge::updateLine()
 
 		if (getData())
 		{
-			TokenComponentInheritanceChain* componentInheritance = getData()->getComponent<TokenComponentInheritanceChain>();
+			TokenComponentInheritanceChain* componentInheritance =
+				getData()->getComponent<TokenComponentInheritanceChain>();
 			if (componentInheritance && componentInheritance->inheritanceEdgeIds.size() > 1)
 			{
 				style.dashed = true;
 			}
 		}
 
-		child->updateLine(ownerRect, targetRect, ownerParentRect, targetParentRect, style, m_weight, showArrow);
+		child->updateLine(
+			ownerRect, targetRect, ownerParentRect, targetParentRect, style, m_weight, showArrow);
 	}
 
 	this->setZValue(style.zValue);
@@ -302,11 +309,26 @@ void QtGraphEdge::setIsFocused(bool isFocused)
 	}
 }
 
+void QtGraphEdge::setIsCoFocused(bool isCoFocused)
+{
+	if (m_isCoFocused != isCoFocused)
+	{
+		m_isCoFocused = isCoFocused;
+		updateLine();
+	}
+}
+
+bool QtGraphEdge::isFocusable() const
+{
+	return m_isInteractive;
+}
+
 void QtGraphEdge::onClick()
 {
-	if (!getData() || m_owner->isGroupNode() || m_target->isGroupNode())
+	if (isExpandable())
 	{
-		QtGraphNode* node = (m_direction == TokenComponentAggregation::DIRECTION_BACKWARD ? m_owner : m_target);
+		QtGraphNode* node =
+			(m_direction == TokenComponentAggregation::DIRECTION_BACKWARD ? m_owner : m_target);
 		if (m_owner->isGroupNode())
 		{
 			node = m_owner;
@@ -321,27 +343,27 @@ void QtGraphEdge::onClick()
 	else if (isTrailEdge())
 	{
 		MessageActivateTrailEdge(
-			{ getData()->getId() },
+			{getData()->getId()},
 			getData()->getType(),
 			getData()->getFrom()->getNameHierarchy(),
-			getData()->getTo()->getNameHierarchy()
-		).dispatch();
+			getData()->getTo()->getNameHierarchy())
+			.dispatch();
 	}
 	else
 	{
-		TokenComponentInheritanceChain* componentInheritance = getData()->getComponent<TokenComponentInheritanceChain>();
+		TokenComponentInheritanceChain* componentInheritance =
+			getData()->getComponent<TokenComponentInheritanceChain>();
 
 		MessageActivateEdge msg(
 			getData()->getId(),
 			componentInheritance ? Edge::EDGE_AGGREGATION : getData()->getType(),
 			getData()->getFrom()->getNameHierarchy(),
-			getData()->getTo()->getNameHierarchy()
-		);
+			getData()->getTo()->getNameHierarchy());
 
 		if (getData()->getType() == Edge::EDGE_AGGREGATION)
 		{
-			msg.aggregationIds =
-				utility::toVector<Id>(getData()->getComponent<TokenComponentAggregation>()->getAggregationIds());
+			msg.aggregationIds = utility::toVector<Id>(
+				getData()->getComponent<TokenComponentAggregation>()->getAggregationIds());
 		}
 		else if (componentInheritance)
 		{
@@ -362,11 +384,11 @@ void QtGraphEdge::onHide()
 	}
 }
 
-void QtGraphEdge::focusIn()
+void QtGraphEdge::coFocusIn()
 {
-	if (!m_isFocused)
+	if (!m_isCoFocused)
 	{
-		m_isFocused = true;
+		m_isCoFocused = true;
 		updateLine();
 
 		if (s_focusedEdge == this)
@@ -381,7 +403,8 @@ void QtGraphEdge::focusIn()
 				info.title = L"ambiguous " + info.title;
 			}
 
-			if (type == Edge::EDGE_AGGREGATION && m_direction == TokenComponentAggregation::DIRECTION_NONE)
+			if (type == Edge::EDGE_AGGREGATION &&
+				m_direction == TokenComponentAggregation::DIRECTION_NONE)
 			{
 				info.title = L"bidirectional " + info.title;
 			}
@@ -395,7 +418,8 @@ void QtGraphEdge::focusIn()
 
 			if (type == Edge::EDGE_INHERITANCE && getData())
 			{
-				TokenComponentInheritanceChain* componentInheritance = getData()->getComponent<TokenComponentInheritanceChain>();
+				TokenComponentInheritanceChain* componentInheritance =
+					getData()->getComponent<TokenComponentInheritanceChain>();
 				if (componentInheritance && componentInheritance->inheritanceEdgeIds.size() > 1)
 				{
 					info.title = L"multi-level " + info.title;
@@ -407,11 +431,11 @@ void QtGraphEdge::focusIn()
 	}
 }
 
-void QtGraphEdge::focusOut()
+void QtGraphEdge::coFocusOut()
 {
-	if (m_isFocused)
+	if (m_isCoFocused)
 	{
-		m_isFocused = false;
+		m_isCoFocused = false;
 		updateLine();
 
 		if (s_focusedEdge == this)
@@ -454,11 +478,13 @@ void QtGraphEdge::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 
 void QtGraphEdge::hoverEnterEvent(QGraphicsSceneHoverEvent* event)
 {
+	m_focusHandler->focusEdge(this);
+
 	if (m_useBezier)
 	{
 		if (s_focusedBezierEdge && s_focusedBezierEdge != this)
 		{
-			s_focusedBezierEdge->focusOut();
+			s_focusedBezierEdge->coFocusOut();
 		}
 
 		s_focusedBezierEdge = this;
@@ -468,25 +494,27 @@ void QtGraphEdge::hoverEnterEvent(QGraphicsSceneHoverEvent* event)
 
 	if (getData() && !m_useBezier)
 	{
-		MessageFocusIn(std::vector<Id>(1, getData()->getId()), TOOLTIP_ORIGIN_GRAPH).dispatch();
+		MessageFocusIn({getData()->getId()}, TOOLTIP_ORIGIN_GRAPH).dispatch();
 	}
 	else
 	{
-		focusIn();
+		coFocusIn();
 	}
 }
 
 void QtGraphEdge::hoverLeaveEvent(QGraphicsSceneHoverEvent* event)
 {
+	m_focusHandler->defocusEdge(this);
+
 	s_focusedBezierEdge = nullptr;
 
 	if (getData() && !m_useBezier)
 	{
-		MessageFocusOut(std::vector<Id>(1, getData()->getId())).dispatch();
+		MessageFocusOut({getData()->getId()}).dispatch();
 	}
 	else
 	{
-		focusOut();
+		coFocusOut();
 	}
 
 	s_focusedEdge = nullptr;
@@ -501,6 +529,16 @@ void QtGraphEdge::setDirection(TokenComponentAggregation::Direction direction)
 	}
 }
 
+bool QtGraphEdge::isHorizontal() const
+{
+	return m_isHorizontal;
+}
+
+bool QtGraphEdge::isExpandable() const
+{
+	return !getData() || m_owner->isGroupNode() || m_target->isGroupNode();
+}
+
 bool QtGraphEdge::isTrailEdge() const
 {
 	return m_isTrailEdge;
@@ -512,6 +550,11 @@ void QtGraphEdge::setIsTrailEdge(std::vector<Vec4i> path, bool horizontal)
 	m_isTrailEdge = true;
 	m_useBezier = true;
 	m_isHorizontal = horizontal;
+}
+
+bool QtGraphEdge::isBezierEdge() const
+{
+	return m_useBezier;
 }
 
 void QtGraphEdge::setUseBezier(bool useBezier)
@@ -528,4 +571,14 @@ void QtGraphEdge::clearPath()
 bool QtGraphEdge::isAmbiguous() const
 {
 	return m_data && m_data->getComponent<TokenComponentIsAmbiguous>();
+}
+
+QRectF QtGraphEdge::getBoundingRect() const
+{
+	if (m_child)
+	{
+		return m_child->sceneBoundingRect();
+	}
+
+	return QRectF();
 }

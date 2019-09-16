@@ -10,6 +10,7 @@
 
 #include "FilePath.h"
 
+#include "CodeFocusHandler.h"
 #include "CodeSnippetParams.h"
 
 class QtCodeArea;
@@ -19,8 +20,7 @@ class QtCodeSnippet;
 class QVBoxLayout;
 class TimeStamp;
 
-class QtCodeFile
-	: public QFrame
+class QtCodeFile: public QFrame
 {
 	Q_OBJECT
 
@@ -51,6 +51,9 @@ public:
 	void setIsComplete(bool isComplete);
 	void setIsIndexed(bool isIndexed);
 
+	bool isCollapsed() const;
+	void toggleCollapsed();
+
 	void setMinimized();
 	void setSnippets();
 
@@ -59,7 +62,14 @@ public:
 	void updateSnippets();
 	void updateTitleBar();
 
-	void findScreenMatches(const std::wstring& query, std::vector<std::pair<QtCodeArea*, Id>>* screenMatches);
+	void findScreenMatches(
+		const std::wstring& query, std::vector<std::pair<QtCodeArea*, Id>>* screenMatches);
+
+	bool hasFocus(const CodeFocusHandler::Focus& focus) const;
+	bool setFocus(Id locationId);
+	bool moveFocus(const CodeFocusHandler::Focus& focus, CodeFocusHandler::Direction direction);
+	void focusTop();
+	void focusBottom();
 
 public slots:
 	void clickedMinimizeButton();
@@ -80,4 +90,4 @@ private:
 	bool m_isWholeFile;
 };
 
-#endif // QT_CODE_FILE_H
+#endif	  // QT_CODE_FILE_H

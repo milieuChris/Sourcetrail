@@ -6,8 +6,7 @@
 
 class QtCodeNavigator;
 
-class QtCodeView
-	: public CodeView
+class QtCodeView: public CodeView
 {
 public:
 	QtCodeView(ViewLayout* viewLayout);
@@ -28,10 +27,14 @@ public:
 	void clear() override;
 
 	void showSnippets(
-		const std::vector<CodeFileParams> files, const CodeParams params, const CodeScrollParams scrollParams) override;
+		const std::vector<CodeFileParams> files,
+		const CodeParams params,
+		const CodeScrollParams scrollParams) override;
 
 	void showSingleFile(
-		const CodeFileParams file, const CodeParams params, const CodeScrollParams scrollParams) override;
+		const CodeFileParams file,
+		const CodeParams params,
+		const CodeScrollParams scrollParams) override;
 
 	void updateSourceLocations(const std::vector<CodeFileParams> files) override;
 
@@ -39,13 +42,18 @@ public:
 
 	bool showsErrors() const override;
 
-	void focusTokenIds(const std::vector<Id>& focusedTokenIds) override;
-	void defocusTokenIds() override;
+	void coFocusTokenIds(const std::vector<Id>& coFocusedTokenIds) override;
+	void deCoFocusTokenIds() override;
 
 	bool isInListMode() const override;
 	void setMode(bool listMode) override;
 
 	bool hasSingleFileCached(const FilePath& filePath) const override;
+
+	void focus() override;
+	void defocus() override;
+	bool hasFocus() override;
+	bool m_hasFocus = false;
 
 private:
 	void setNavigationState(const CodeParams& params);
@@ -58,4 +66,4 @@ private:
 	QtCodeNavigator* m_widget;
 };
 
-# endif // QT_CODE_VIEW_H
+#endif	  // QT_CODE_VIEW_H

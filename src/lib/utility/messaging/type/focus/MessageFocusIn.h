@@ -5,17 +5,14 @@
 
 #include "Message.h"
 #include "TabId.h"
+#include "TooltipOrigin.h"
 #include "types.h"
 
-#include "TooltipOrigin.h"
-
-class MessageFocusIn
-	: public Message<MessageFocusIn>
+class MessageFocusIn: public Message<MessageFocusIn>
 {
 public:
 	MessageFocusIn(const std::vector<Id>& tokenIds, TooltipOrigin origin)
-		: tokenIds(tokenIds)
-		, origin(origin)
+		: tokenIds(tokenIds), origin(origin)
 	{
 		setIsLogged(false);
 		setSchedulerId(TabId::currentTab());
@@ -28,7 +25,7 @@ public:
 
 	virtual void print(std::wostream& os) const
 	{
-		for (const Id& id : tokenIds)
+		for (const Id& id: tokenIds)
 		{
 			os << id << L" ";
 		}
@@ -38,4 +35,4 @@ public:
 	const TooltipOrigin origin;
 };
 
-#endif //MESSAGE_FOCUS_IN_H
+#endif	  // MESSAGE_FOCUS_IN_H

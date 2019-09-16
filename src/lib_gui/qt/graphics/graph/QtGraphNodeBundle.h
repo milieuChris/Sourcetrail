@@ -6,12 +6,17 @@
 
 class QtCountCircleItem;
 
-class QtGraphNodeBundle
-	: public QtGraphNode
+class QtGraphNodeBundle: public QtGraphNode
 {
 	Q_OBJECT
 public:
-	QtGraphNodeBundle(Id tokenId, size_t nodeCount, NodeType type, std::wstring name);
+	QtGraphNodeBundle(
+		GraphFocusHandler* focusHandler,
+		Id tokenId,
+		size_t nodeCount,
+		NodeType type,
+		std::wstring name,
+		bool interactive);
 	virtual ~QtGraphNodeBundle();
 
 	// QtGraphNode implementation
@@ -31,4 +36,4 @@ private:
 	NodeType m_type;
 };
 
-#endif // QT_GRAPH_NODE_BUNDLE_H
+#endif	  // QT_GRAPH_NODE_BUNDLE_H

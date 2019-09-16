@@ -3,16 +3,21 @@
 #include <QBrush>
 #include <QPen>
 
-#include "MessageGraphNodeBundleSplit.h"
-
 #include "GraphViewStyle.h"
+#include "MessageGraphNodeBundleSplit.h"
 #include "QtCountCircleItem.h"
 
-QtGraphNodeBundle::QtGraphNodeBundle(Id tokenId, size_t nodeCount, NodeType type, std::wstring name)
-	: QtGraphNode()
-	, m_tokenId(tokenId)
-	, m_type(type)
+QtGraphNodeBundle::QtGraphNodeBundle(
+	GraphFocusHandler* focusHandler,
+	Id tokenId,
+	size_t nodeCount,
+	NodeType type,
+	std::wstring name,
+	bool interactive)
+	: QtGraphNode(focusHandler), m_tokenId(tokenId), m_type(type)
 {
+	m_isInteractive = interactive;
+
 	this->setName(name);
 
 	m_circle = new QtCountCircleItem(this);
@@ -23,9 +28,7 @@ QtGraphNodeBundle::QtGraphNodeBundle(Id tokenId, size_t nodeCount, NodeType type
 	this->setToolTip("bundle");
 }
 
-QtGraphNodeBundle::~QtGraphNodeBundle()
-{
-}
+QtGraphNodeBundle::~QtGraphNodeBundle() {}
 
 bool QtGraphNodeBundle::isBundleNode() const
 {
@@ -41,9 +44,10 @@ void QtGraphNodeBundle::onClick()
 {
 	MessageGraphNodeBundleSplit(
 		m_tokenId,
-		(!m_type.isUnknownSymbol() || getName() == L"Symbols") && getName() != L"Anonymous Namespaces", // TODO: move to language package
-		!m_type.isUnknownSymbol() || getName() == L"Symbols"
-	).dispatch();
+		(!m_type.isUnknownSymbol() || getName() == L"Symbols") &&
+			getName() != L"Anonymous Namespaces",	 // TODO: move to language package
+		!m_type.isUnknownSymbol() || getName() == L"Symbols")
+		.dispatch();
 }
 
 void QtGraphNodeBundle::updateStyle()
@@ -51,11 +55,12 @@ void QtGraphNodeBundle::updateStyle()
 	GraphViewStyle::NodeStyle style;
 	if (!m_type.isUnknownSymbol())
 	{
-		style = GraphViewStyle::getStyleForNodeType(m_type, true, false, m_isHovering, false, false);
+		style = GraphViewStyle::getStyleForNodeType(
+			m_type, true, false, m_isFocused, m_isCoFocused, false, false);
 	}
 	else
 	{
-		style = GraphViewStyle::getStyleOfBundleNode(m_isHovering);
+		style = GraphViewStyle::getStyleOfBundleNode(m_isFocused);
 	}
 	setStyle(style);
 
@@ -71,8 +76,7 @@ void QtGraphNodeBundle::updateStyle()
 		accessStyle.color.fill.c_str(),
 		accessStyle.color.text.c_str(),
 		accessStyle.color.border.c_str(),
-		style.borderWidth
-	);
+		style.borderWidth);
 }
 
 

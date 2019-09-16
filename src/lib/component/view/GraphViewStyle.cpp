@@ -1,10 +1,10 @@
 #include "GraphViewStyle.h"
 
-#include "GraphViewStyleImpl.h"
 #include "ApplicationSettings.h"
 #include "ColorScheme.h"
-#include "logging.h"
+#include "GraphViewStyleImpl.h"
 #include "ResourcePaths.h"
+#include "logging.h"
 #include "utilityString.h"
 
 int GraphViewStyle::s_gridCellSize = 5;
@@ -19,6 +19,7 @@ int GraphViewStyle::s_fontSize;
 std::string GraphViewStyle::s_fontName;
 float GraphViewStyle::s_zoomFactor;
 
+std::string GraphViewStyle::s_focusColor;
 std::map<std::string, GraphViewStyle::NodeColor> GraphViewStyle::s_nodeColors;
 std::map<std::string, std::string> GraphViewStyle::s_edgeColors;
 std::map<bool, GraphViewStyle::NodeColor> GraphViewStyle::s_screenMatchColors;
@@ -32,7 +33,7 @@ Vec2i GraphViewStyle::alignOnRaster(Vec2i position)
 		int t = position.x / rasterPosDivisor;
 		int r = position.x % rasterPosDivisor;
 
-		if (std::abs(r) > rasterPosDivisor/2)
+		if (std::abs(r) > rasterPosDivisor / 2)
 		{
 			if (t != 0)
 			{
@@ -52,13 +53,13 @@ Vec2i GraphViewStyle::alignOnRaster(Vec2i position)
 		int t = position.y / rasterPosDivisor;
 		int r = position.y % rasterPosDivisor;
 
-		if (std::abs(r) > rasterPosDivisor/2)
+		if (std::abs(r) > rasterPosDivisor / 2)
 		{
-			if(t != 0)
+			if (t != 0)
 			{
 				t += (t / std::abs(t));
 			}
-			else if(r != 0)
+			else if (r != 0)
 			{
 				t += (r / std::abs(r));
 			}
@@ -135,11 +136,13 @@ void GraphViewStyle::loadStyleSettings()
 	s_fontName = ApplicationSettings::getInstance()->getFontName();
 
 	float zoomDifference = getImpl()->getGraphViewZoomDifferenceForPlatform();
-	s_zoomFactor = (ApplicationSettings::getInstance()->getFontSize()) / float(s_fontSize) * zoomDifference;
+	s_zoomFactor = (ApplicationSettings::getInstance()->getFontSize()) / float(s_fontSize) *
+		zoomDifference;
 
 	s_charWidths.clear();
 	s_charHeights.clear();
 
+	s_focusColor.clear();
 	s_nodeColors.clear();
 	s_edgeColors.clear();
 	s_screenMatchColors.clear();
@@ -219,7 +222,8 @@ std::string GraphViewStyle::getFontNameOfGroupNode()
 	return s_fontName + ", consolas, monospace, sans-serif";
 }
 
-GraphViewStyle::NodeMargins GraphViewStyle::getMarginsForDataNode(NodeType::StyleType type, bool hasIcon, bool hasChildren)
+GraphViewStyle::NodeMargins GraphViewStyle::getMarginsForDataNode(
+	NodeType::StyleType type, bool hasIcon, bool hasChildren)
 {
 	NodeMargins margins;
 	margins.spacingX = 6;
@@ -364,8 +368,14 @@ GraphViewStyle::NodeMargins GraphViewStyle::getMarginsOfGroupNode(GroupType type
 }
 
 GraphViewStyle::NodeStyle GraphViewStyle::getStyleForNodeType(
-	NodeType type, bool defined, bool isActive, bool isFocused, bool hasChildren, bool hasQualifier
-){
+	NodeType type,
+	bool defined,
+	bool isActive,
+	bool isFocused,
+	bool isCoFocused,
+	bool hasChildren,
+	bool hasQualifier)
+{
 	return getStyleForNodeType(
 		type.getNodeStyle(),
 		type.getUnderscoredTypeString(),
@@ -373,24 +383,30 @@ GraphViewStyle::NodeStyle GraphViewStyle::getStyleForNodeType(
 		defined,
 		isActive,
 		isFocused,
+		isCoFocused,
 		hasChildren,
-		hasQualifier
-	);
+		hasQualifier);
 }
 
 GraphViewStyle::NodeStyle GraphViewStyle::getStyleForNodeType(
-	NodeType::StyleType type, const std::string& underscoredTypeString,
-	const FilePath& iconPath, bool defined, bool isActive, bool isFocused,
-	bool hasChildren, bool hasQualifier
-){
+	NodeType::StyleType type,
+	const std::string& underscoredTypeString,
+	const FilePath& iconPath,
+	bool defined,
+	bool isActive,
+	bool isFocused,
+	bool isCoFocused,
+	bool hasChildren,
+	bool hasQualifier)
+{
 	NodeStyle style;
 
-	style.color = getNodeColor(underscoredTypeString, isActive || isFocused);
+	style.color = getNodeColor(underscoredTypeString, isActive || isCoFocused);
 
 	style.fontName = getFontNameForDataNode();
 	style.fontSize = getFontSizeForStyleType(type);
 
-	if (isActive || isFocused)
+	if (isActive || isCoFocused)
 	{
 		style.fontBold = true;
 	}
@@ -476,6 +492,12 @@ GraphViewStyle::NodeStyle GraphViewStyle::getStyleForNodeType(
 		}
 	}
 
+	if (isFocused)
+	{
+		style.color.border = getFocusColor();
+		style.borderWidth = 2;
+	}
+
 	return style;
 }
 
@@ -532,9 +554,9 @@ GraphViewStyle::NodeStyle GraphViewStyle::getStyleOfBundleNode(bool isFocused)
 		true,
 		false,
 		isFocused,
+		isFocused,
 		false,
-		false
-	);
+		false);
 }
 
 GraphViewStyle::NodeStyle GraphViewStyle::getStyleOfQualifier()
@@ -562,7 +584,7 @@ GraphViewStyle::NodeStyle GraphViewStyle::getStyleOfTextNode(int fontSizeDiff)
 	return style;
 }
 
-GraphViewStyle::NodeStyle GraphViewStyle::getStyleOfGroupNode(GroupType type, bool isFocused)
+GraphViewStyle::NodeStyle GraphViewStyle::getStyleOfGroupNode(GroupType type, bool isCoFocused)
 {
 	NodeStyle style;
 
@@ -586,7 +608,7 @@ GraphViewStyle::NodeStyle GraphViewStyle::getStyleOfGroupNode(GroupType type, bo
 	{
 		colorType += "inheritance";
 
-		if (isFocused)
+		if (isCoFocused)
 		{
 			style.borderWidth = 3;
 		}
@@ -596,7 +618,7 @@ GraphViewStyle::NodeStyle GraphViewStyle::getStyleOfGroupNode(GroupType type, bo
 		return style;
 	}
 
-	style.color = getNodeColor(colorType, isFocused);
+	style.color = getNodeColor(colorType, isCoFocused);
 
 	style.fontName = getFontNameOfGroupNode();
 	style.fontSize = getFontSizeOfGroupNode();
@@ -613,12 +635,14 @@ GraphViewStyle::EdgeStyle GraphViewStyle::getStyleForEdgeType(
 {
 	EdgeStyle style;
 
-	style.width = isActive ? 4 : 2;
-	style.zValue = isActive ? 5 : 2;
+	bool active = isActive || isFocused;
+
+	style.width = active ? 4 : 2;
+	style.zValue = active ? 5 : 2;
 
 	if (isTrailEdge)
 	{
-		style.zValue = isActive ? 5 : 2;
+		style.zValue = active ? 5 : 2;
 	}
 
 	style.arrowLength = 5;
@@ -633,7 +657,14 @@ GraphViewStyle::EdgeStyle GraphViewStyle::getStyleForEdgeType(
 	style.originOffset.y = 5;
 	style.targetOffset.y = -5;
 
-	style.color = getEdgeColor(utility::encodeToUtf8(Edge::getUnderscoredTypeString(type)), isActive || isFocused);
+	if (isFocused)
+	{
+		style.color = getFocusColor();
+	}
+	else
+	{
+		style.color = getEdgeColor(utility::encodeToUtf8(Edge::getUnderscoredTypeString(type)));
+	}
 
 	switch (type)
 	{
@@ -646,7 +677,7 @@ GraphViewStyle::EdgeStyle GraphViewStyle::getStyleForEdgeType(
 		style.originOffset.y = 0;
 		style.targetOffset.y = 0;
 		style.verticalOffset = 0;
-		style.zValue = isActive ? 1 : -5;
+		style.zValue = active ? 1 : -5;
 		break;
 
 	case Edge::EDGE_CALL:
@@ -658,7 +689,7 @@ GraphViewStyle::EdgeStyle GraphViewStyle::getStyleForEdgeType(
 		{
 			style.width = 3;
 			style.color = ColorScheme::getInstance()->getColor(
-				"graph/edge/" + utility::encodeToUtf8(Edge::getUnderscoredTypeString(type)) + "/trail_focus", style.color);
+				"graph/edge/call_trail_focus", style.color);
 		}
 		break;
 
@@ -679,17 +710,17 @@ GraphViewStyle::EdgeStyle GraphViewStyle::getStyleForEdgeType(
 		style.targetOffset.y = -10;
 		style.verticalOffset = 0;
 		style.cornerRadius = 7;
-		style.zValue = isActive ? 2 : -3;
-		style.width = isActive ? 3 : 2;
+		style.zValue = active ? 2 : -3;
+		style.width = active ? 3 : 2;
 
 		if (isTrailEdge)
 		{
-			style.zValue = isActive ? 2 : -20;
+			style.zValue = active ? 2 : -20;
 		}
 		break;
 
 	case Edge::EDGE_TEMPLATE_SPECIALIZATION:
-		style.zValue = isActive ? 2 : -3;
+		style.zValue = active ? 2 : -3;
 		style.arrowLength = 10;
 		style.arrowWidth = 13;
 		style.arrowClosed = true;
@@ -697,7 +728,7 @@ GraphViewStyle::EdgeStyle GraphViewStyle::getStyleForEdgeType(
 		break;
 
 	case Edge::EDGE_INCLUDE:
-		style.zValue = isActive ? 2 : -3;
+		style.zValue = active ? 2 : -3;
 	case Edge::EDGE_MACRO_USAGE:
 		style.originOffset.y = 0;
 		style.targetOffset.y = 0;
@@ -717,11 +748,13 @@ int GraphViewStyle::toGridOffset(int x)
 {
 	if (x > 0)
 	{
-		return std::ceil(x / double(s_gridCellPadding + s_gridCellSize)) * (s_gridCellPadding + s_gridCellSize);
+		return std::ceil(x / double(s_gridCellPadding + s_gridCellSize)) *
+			(s_gridCellPadding + s_gridCellSize);
 	}
 	else
 	{
-		return std::floor(x / double(s_gridCellPadding + s_gridCellSize)) * (s_gridCellPadding + s_gridCellSize);
+		return std::floor(x / double(s_gridCellPadding + s_gridCellSize)) *
+			(s_gridCellPadding + s_gridCellSize);
 	}
 }
 
@@ -740,9 +773,19 @@ float GraphViewStyle::getZoomFactor()
 	return s_zoomFactor;
 }
 
-const GraphViewStyle::NodeColor& GraphViewStyle::getNodeColor(const std::string& typeStr, bool focus)
+const std::string& GraphViewStyle::getFocusColor()
 {
-	std::string type = focus ? typeStr + "focus" : typeStr;
+	if (s_focusColor.empty())
+	{
+		s_focusColor = ColorScheme::getInstance()->getColor("graph/focus");
+	}
+
+	return s_focusColor;
+}
+
+const GraphViewStyle::NodeColor& GraphViewStyle::getNodeColor(const std::string& typeStr, bool highlight)
+{
+	std::string type = highlight ? typeStr + "highlight" : typeStr;
 	std::map<std::string, NodeColor>::const_iterator it = s_nodeColors.find(type);
 
 	if (it != s_nodeColors.end())
@@ -752,33 +795,27 @@ const GraphViewStyle::NodeColor& GraphViewStyle::getNodeColor(const std::string&
 
 	NodeColor color;
 	ColorScheme* scheme = ColorScheme::getInstance().get();
-	ColorScheme::ColorState state = focus ? ColorScheme::FOCUS : ColorScheme::NORMAL;
 
-	color.fill = scheme->getNodeTypeColor(typeStr, "fill", state);
-	color.border = scheme->getNodeTypeColor(typeStr, "border", state);
-	color.text = scheme->getNodeTypeColor(typeStr, "text", state);
-	color.icon = scheme->getNodeTypeColor(typeStr, "icon", state);
-	color.hatching = scheme->getNodeTypeColor(typeStr, "hatching", state);
+	color.fill = scheme->getNodeTypeColor(typeStr, "fill", highlight);
+	color.border = scheme->getNodeTypeColor(typeStr, "border", highlight);
+	color.text = scheme->getNodeTypeColor(typeStr, "text", highlight);
+	color.icon = scheme->getNodeTypeColor(typeStr, "icon", highlight);
+	color.hatching = scheme->getNodeTypeColor(typeStr, "hatching", highlight);
 
 	s_nodeColors.emplace(type, color);
 
 	return s_nodeColors.find(type)->second;
 }
 
-const std::string& GraphViewStyle::getEdgeColor(const std::string& typeStr, bool focus)
+const std::string& GraphViewStyle::getEdgeColor(const std::string& type)
 {
-	std::string type = focus ? typeStr + "focus" : typeStr;
 	std::map<std::string, std::string>::const_iterator it = s_edgeColors.find(type);
-
 	if (it != s_edgeColors.end())
 	{
 		return it->second;
 	}
 
-	ColorScheme* scheme = ColorScheme::getInstance().get();
-	ColorScheme::ColorState state = focus ? ColorScheme::FOCUS : ColorScheme::NORMAL;
-	std::string color = scheme->getEdgeTypeColor(typeStr, state);
-
+	std::string color = ColorScheme::getInstance()->getEdgeTypeColor(type);
 	s_edgeColors.emplace(type, color);
 
 	return s_edgeColors.find(type)->second;

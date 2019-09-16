@@ -31,6 +31,7 @@ public:
 	void clearComponents();
 	void refreshViews();
 
+	View* getView(const std::string& name) const;
 	std::shared_ptr<DialogView> getDialogView(DialogView::UseCase useCase) const;
 
 private:
@@ -42,4 +43,4 @@ private:
 	std::map<DialogView::UseCase, std::shared_ptr<DialogView>> m_dialogViews;
 };
 
-#endif // COMPONENT_MANAGER_H
+#endif	  // COMPONENT_MANAGER_H

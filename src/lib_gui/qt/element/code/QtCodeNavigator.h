@@ -3,15 +3,16 @@
 
 #include <QWidget>
 
+#include "CodeFocusHandler.h"
 #include "ErrorInfo.h"
 #include "LocationType.h"
+#include "MessageIndexingFinished.h"
+#include "MessageListener.h"
+#include "MessageSwitchColorScheme.h"
+#include "MessageWindowFocus.h"
 #include "QtCodeFileList.h"
 #include "QtCodeFileSingle.h"
 #include "QtThreadedFunctor.h"
-#include "MessageListener.h"
-#include "MessageIndexingFinished.h"
-#include "MessageSwitchColorScheme.h"
-#include "MessageWindowFocus.h"
 
 class QLabel;
 class QPushButton;
@@ -21,6 +22,7 @@ class SourceLocationFile;
 
 class QtCodeNavigator
 	: public QWidget
+	, public CodeFocusHandler
 	, public MessageListener<MessageIndexingFinished>
 	, public MessageListener<MessageSwitchColorScheme>
 	, public MessageListener<MessageWindowFocus>
@@ -42,7 +44,10 @@ public:
 	bool addSingleFile(const CodeFileParams& params, bool useSingleFileCache);
 	void updateSourceLocations(const CodeSnippetParams& params);
 	void updateReferenceCount(
-		size_t referenceCount, size_t referenceIndex, size_t localReferenceCount, size_t localReferenceIndex);
+		size_t referenceCount,
+		size_t referenceIndex,
+		size_t localReferenceCount,
+		size_t localReferenceIndex);
 
 	void clear();
 	void clearSnippets();
@@ -70,8 +75,8 @@ public:
 	const std::set<Id>& getActiveLocalTokenIds() const;
 	void setActiveLocalTokenIds(const std::vector<Id>& activeLocalTokenIds, LocationType locationType);
 
-	const std::set<Id>& getFocusedTokenIds() const;
-	void setFocusedTokenIds(const std::vector<Id>& focusedTokenIds);
+	const std::set<Id>& getCoFocusedTokenIds() const;
+	void setCoFocusedTokenIds(const std::vector<Id>& coFocusedTokenIds);
 
 	std::wstring getErrorMessageForId(Id errorId) const;
 	void setErrorInfos(const std::vector<ErrorInfo>& errorInfos);
@@ -82,8 +87,8 @@ public:
 	bool isInListMode() const;
 	bool hasSingleFileCached(const FilePath& filePath) const;
 
-	void focusTokenIds(const std::vector<Id>& focusedTokenIds);
-	void defocusTokenIds();
+	void coFocusTokenIds(const std::vector<Id>& coFocusedTokenIds);
+	void deCoFocusTokenIds();
 
 	void updateFiles();
 
@@ -102,6 +107,7 @@ public slots:
 
 protected:
 	void showEvent(QShowEvent* event) override;
+	void keyPressEvent(QKeyEvent* event) override;
 
 private slots:
 	void previousReference();
@@ -135,7 +141,8 @@ private:
 
 	std::set<Id> m_activeTokenIds;
 	std::set<Id> m_activeLocalTokenIds;
-	std::set<Id> m_focusedTokenIds;
+	std::set<Id> m_coFocusedTokenIds;
+
 	std::map<Id, ErrorInfo> m_errorInfos;
 
 	QtSearchBarButton* m_prevReferenceButton;
@@ -157,4 +164,4 @@ private:
 	Id m_activeScreenMatchId = 0;
 };
 
-#endif // QT_CODE_NAVIGATOR_H
+#endif	  // QT_CODE_NAVIGATOR_H

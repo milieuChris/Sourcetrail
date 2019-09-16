@@ -9,6 +9,7 @@
 
 #include "QtCodeArea.h"
 
+#include "CodeFocusHandler.h"
 #include "CodeSnippetParams.h"
 
 class QBoxLayout;
@@ -17,8 +18,7 @@ class QtCodeFile;
 class QtCodeNavigator;
 class SourceLocationFile;
 
-class QtCodeSnippet
-	: public QFrame
+class QtCodeSnippet: public QFrame
 {
 	Q_OBJECT
 
@@ -49,7 +49,14 @@ public:
 
 	std::string getCode() const;
 
-	void findScreenMatches(const std::wstring& query, std::vector<std::pair<QtCodeArea*, Id>>* screenMatches);
+	void findScreenMatches(
+		const std::wstring& query, std::vector<std::pair<QtCodeArea*, Id>>* screenMatches);
+
+	bool hasFocus(const CodeFocusHandler::Focus& focus) const;
+	bool setFocus(Id locationId);
+	bool moveFocus(const CodeFocusHandler::Focus& focus, CodeFocusHandler::Direction direction);
+	void focusTop();
+	void focusBottom();
 
 	void ensureLocationIdVisible(Id locationId, bool animated);
 
@@ -77,4 +84,4 @@ private:
 	QtCodeArea* m_codeArea;
 };
 
-#endif // QT_CODE_SNIPPET_H
+#endif	  // QT_CODE_SNIPPET_H

@@ -231,6 +231,7 @@
 
 	<graph>
 		<background>#494949</background>
+		<focus>cyan</focus>
 
 		<node>
 			<default>
@@ -254,7 +255,7 @@
 			<type>
 				<border>
 					<normal>#20FFFFFF</normal>
-					<focus>#FFFFFF</focus>
+					<highlight>#FFFFFF</highlight>
 				</border>
 				<text>
 					<normal>#FFFFFF</normal>
@@ -294,11 +295,11 @@
 			<function>
 				<fill>
 					<normal>#FFCC3B</normal>
-					<focus>#FFD05A</focus>
+					<highlight>#FFD05A</highlight>
 				</fill>
 				<border>
 					<normal>transparent</normal>
-					<focus>#FFFFFF</focus>
+					<highlight>#FFFFFF</highlight>
 				</border>
 				<hatching>
 					<normal>#FFE8A6</normal>
@@ -311,11 +312,11 @@
 			<global_variable>
 				<fill>
 					<normal>#2FC2D6</normal>
-					<focus>#38D3E8</focus>
+					<highlight>#38D3E8</highlight>
 				</fill>
 				<border>
 					<normal>transparent</normal>
-					<focus>#FFFFFF</focus>
+					<highlight>#FFFFFF</highlight>
 				</border>
 				<hatching>
 					<normal>#96DAE3</normal>
@@ -337,7 +338,7 @@
 				</fill>
 				<border>
 					<normal>#80FFFFFF</normal>
-					<focus>#FFFFFF</focus>
+					<highlight>#FFFFFF</highlight>
 				</border>
 				<text>
 					<normal>#FFFFFF</normal>
@@ -359,11 +360,11 @@
 			<file>
 				<fill>
 					<normal>#4E82F6</normal>
-					<focus>#6793F6</focus>
+					<highlight>#6793F6</highlight>
 				</fill>
 				<border>
 					<normal>#20FFFFFF</normal>
-					<focus>#FFFFFF</focus>
+					<highlight>#FFFFFF</highlight>
 				</border>
 				<text>
 					<normal>#FFFFFF</normal>
@@ -393,7 +394,7 @@
 				</fill>
 				<border>
 					<normal>#80FFFFFF</normal>
-					<focus>#FFFFFF</focus>
+					<highlight>#FFFFFF</highlight>
 				</border>
 				<text>
 					<normal>#FFFFFF</normal>
@@ -453,7 +454,7 @@
 					</text>
 					<border>
 						<normal>#4E82F6</normal>
-						<focus>#6793F6</focus>
+						<highlight>#6793F6</highlight>
 					</border>
 				</file>
 				<namespace>
@@ -465,7 +466,7 @@
 					</text>
 					<border>
 						<normal>#873E3E</normal>
-						<focus>#944444</focus>
+						<highlight>#944444</highlight>
 					</border>
 				</namespace>
 				<inheritance>
@@ -479,56 +480,25 @@
 			</group>
 		</node>
 		<edge>
-			<default>
-				<normal>#797979</normal>
-			</default>
+			<default>#797979</default>
 
-			<override>
-				<normal>#BA5ECC</normal>
-			</override>
+			<use>#00A0B6</use>
+			<call>#DEA400</call>
+			<call_trail_focus>#FFFFFF</call_trail_focus>
+			<override>#BA5ECC</override>
 
-			<call>
-				<normal>#DEA400</normal>
-				<trail_focus>#FFFFFF</trail_focus>
-			</call>
+			<template_argument>#D93D5F</template_argument>
+			<type_argument>#D93D5F</type_argument>
+			<template_default_argument>#D93D5F</template_default_argument>
+			<template_specialization>#D93D5F</template_specialization>
+			<template_member_specialization>#D93D5F</template_member_specialization>
 
-			<use>
-				<normal>#00A0B6</normal>
-			</use>
+			<include>#4E82F6</include>
+			<import>#4E82F6</import>
+			<macro_use>#4E82F6</macro_use>
+			<annotation_use>#4E82F6</annotation_use>
 
-			<template_argument>
-				<normal>#D93D5F</normal>
-			</template_argument>
-			<type_argument>
-				<like>template_argument</like>
-			</type_argument>
-			<template_default_argument>
-				<like>template_argument</like>
-			</template_default_argument>
-			<template_specialization>
-				<like>template_argument</like>
-			</template_specialization>
-			<template_member_specialization>
-				<like>template_argument</like>
-			</template_member_specialization>
-
-			<include>
-				<normal>#4E82F6</normal>
-			</include>
-			<import>
-				<normal>#4E82F6</normal>
-			</import>
-			<macro_use>
-				<normal>#4E82F6</normal>
-			</macro_use>
-			<annotation_use>
-				<normal>#4E82F6</normal>
-			</annotation_use>
-
-			<aggregation>
-				<normal>#666666</normal>
-				<focus>#6D6D6D</focus>
-			</aggregation>
+			<aggregation>#666666</aggregation>
 		</edge>
 	</graph>
 

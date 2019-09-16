@@ -9,8 +9,7 @@ class QtCodeFileTitleButton;
 class QtIconStateButton;
 class QtSelfRefreshIconButton;
 
-class QtCodeFileTitleBar
-	: public QtHoverButton
+class QtCodeFileTitleBar: public QtHoverButton
 {
 	Q_OBJECT
 
@@ -27,6 +26,10 @@ public:
 	void setIsComplete(bool isComplete);
 	void setIsIndexed(bool isIndexed);
 	void updateRefCount(int refCount, bool hasErrors, size_t fatalErrorCount);
+
+	bool isCollapsed() const;
+
+	void setIsFocused(bool focused);
 
 	void setMinimized();
 	void setSnippets();
@@ -53,4 +56,4 @@ private:
 	QtIconStateButton* m_maximizeButton;
 };
 
-#endif // QT_CODE_FILE_TITLE_BAR_H
+#endif	  // QT_CODE_FILE_TITLE_BAR_H

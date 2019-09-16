@@ -1,6 +1,13 @@
 #include "Tab.h"
 
-Tab::Tab(Id tabId, const ViewFactory* viewFactory, StorageAccess* storageAccess, ScreenSearchSender* screenSearchSender)
+#include "CodeView.h"
+#include "GraphView.h"
+
+Tab::Tab(
+	Id tabId,
+	const ViewFactory* viewFactory,
+	StorageAccess* storageAccess,
+	ScreenSearchSender* screenSearchSender)
 	: m_tabId(tabId)
 	, m_componentManager(viewFactory, storageAccess)
 	, m_parentLayout(nullptr)
@@ -21,7 +28,7 @@ void Tab::setParentLayout(ViewLayout* parentLayout)
 
 	if (parentLayout)
 	{
-		for (View* view : m_views)
+		for (View* view: m_views)
 		{
 			parentLayout->overrideView(view);
 		}
@@ -65,6 +72,42 @@ void Tab::setViewEnabled(View* view, bool enabled)
 	if (m_parentLayout)
 	{
 		m_parentLayout->setViewEnabled(view, enabled);
+	}
+}
+
+void Tab::handleMessage(MessageFocusView* message)
+{
+	GraphView* graphView = dynamic_cast<GraphView*>(m_componentManager.getView(GraphView::VIEW_NAME));
+	CodeView* codeView = dynamic_cast<CodeView*>(m_componentManager.getView(CodeView::VIEW_NAME));
+
+	if (!graphView || !codeView)
+	{
+		LOG_ERROR("Tab has no code or graph view.");
+		return;
+	}
+
+	MessageFocusView::ViewType type = message->type;
+	if (type == MessageFocusView::ViewType::TOGGLE)
+	{
+		if (graphView->hasFocus())
+		{
+			type = MessageFocusView::ViewType::CODE;
+		}
+		else
+		{
+			type = MessageFocusView::ViewType::GRAPH;
+		}
+	}
+
+	if (type == MessageFocusView::ViewType::GRAPH)
+	{
+		graphView->focus();
+		codeView->defocus();
+	}
+	else
+	{
+		graphView->defocus();
+		codeView->focus();
 	}
 }
 

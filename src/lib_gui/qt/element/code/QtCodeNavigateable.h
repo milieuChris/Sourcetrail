@@ -3,6 +3,7 @@
 
 #include <set>
 
+#include "CodeFocusHandler.h"
 #include "CodeScrollParams.h"
 #include "CodeSnippetParams.h"
 #include "types.h"
@@ -25,18 +26,32 @@ public:
 	virtual void updateFiles() = 0;
 
 	virtual void scrollTo(
-		const FilePath& filePath, size_t lineNumber, Id locationId, bool animated, CodeScrollParams::Target target) = 0;
+		const FilePath& filePath,
+		size_t lineNumber,
+		Id locationId,
+		bool animated,
+		CodeScrollParams::Target target) = 0;
 
 	virtual void onWindowFocus() = 0;
 
-	virtual void findScreenMatches(const std::wstring& query, std::vector<std::pair<QtCodeArea*, Id>>* screenMatches) = 0;
+	virtual void findScreenMatches(
+		const std::wstring& query, std::vector<std::pair<QtCodeArea*, Id>>* screenMatches) = 0;
+
+	virtual void setFocus(Id locationId) = 0;
+	virtual void moveFocus(
+		const CodeFocusHandler::Focus& focus, CodeFocusHandler::Direction direction) = 0;
 
 protected:
 	void ensureWidgetVisibleAnimated(
-		const QWidget* parentWidget, const QWidget *childWidget, QRectF rect, bool animated, CodeScrollParams::Target target);
-	void ensurePercentVisibleAnimated(double percentA, double percentB, bool animated, CodeScrollParams::Target target);
+		const QWidget* parentWidget,
+		const QWidget* childWidget,
+		QRectF rect,
+		bool animated,
+		CodeScrollParams::Target target);
+	void ensurePercentVisibleAnimated(
+		double percentA, double percentB, bool animated, CodeScrollParams::Target target);
 
 	QRect getFocusRectForWidget(const QWidget* childWidget, const QWidget* parentWidget) const;
 };
 
-#endif // QT_CODE_NAVIGATEABLE_H
+#endif	  // QT_CODE_NAVIGATEABLE_H

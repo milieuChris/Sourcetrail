@@ -15,6 +15,12 @@ class QtCodeFileTitleBar;
 class QtCodeNavigator;
 class QtCodeSnippet;
 
+class QtCodeFileListScrollArea: public QScrollArea
+{
+protected:
+	void keyPressEvent(QKeyEvent* event) override;
+};
+
 class QtCodeFileList
 	: public QFrame
 	, public QtCodeNavigateable
@@ -32,17 +38,26 @@ public:
 
 	void addFile(const CodeFileParams& params);
 
-	// QtCodeNaviatebale implementation
+	// QtCodeNavigatebale implementation
 	QScrollArea* getScrollArea() override;
 
 	void updateSourceLocations(const CodeSnippetParams& params) override;
 	void updateFiles() override;
 
-	void scrollTo(const FilePath& filePath, size_t lineNumber, Id locationId, bool animated, CodeScrollParams::Target target) override;
+	void scrollTo(
+		const FilePath& filePath,
+		size_t lineNumber,
+		Id locationId,
+		bool animated,
+		CodeScrollParams::Target target) override;
 
 	void onWindowFocus() override;
 
-	void findScreenMatches(const std::wstring& query, std::vector<std::pair<QtCodeArea*, Id>>* screenMatches) override;
+	void findScreenMatches(
+		const std::wstring& query, std::vector<std::pair<QtCodeArea*, Id>>* screenMatches) override;
+
+	void setFocus(Id locationId) override;
+	void moveFocus(const CodeFocusHandler::Focus& focus, CodeFocusHandler::Direction direction) override;
 
 	void maximizeFirstFile();
 
@@ -64,7 +79,7 @@ private:
 	void updateLastSnippetScrollBar(QScrollBar* mirroredScrollBar);
 
 	QtCodeNavigator* m_navigator;
-	QScrollArea* m_scrollArea;
+	QtCodeFileListScrollArea* m_scrollArea;
 	QFrame* m_filesArea;
 
 	std::vector<QtCodeFile*> m_files;
@@ -79,4 +94,4 @@ private:
 	int m_styleSize = 0;
 };
 
-#endif // QT_CODE_FILE_LIST
+#endif	  // QT_CODE_FILE_LIST

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "ComponentManager.h"
+#include "MessageFocusView.h"
 #include "MessageListener.h"
 #include "MessageRefreshUI.h"
 #include "View.h"
@@ -11,10 +12,14 @@
 
 class Tab
 	: public ViewLayout
+	, public MessageListener<MessageFocusView>
 	, public MessageListener<MessageRefreshUI>
 {
 public:
-	Tab(Id tabId, const ViewFactory* viewFactory, StorageAccess* storageAccess, ScreenSearchSender* screenSearchSender);
+	Tab(Id tabId,
+		const ViewFactory* viewFactory,
+		StorageAccess* storageAccess,
+		ScreenSearchSender* screenSearchSender);
 	virtual ~Tab();
 
 	void setParentLayout(ViewLayout* parentLayout);
@@ -29,6 +34,7 @@ public:
 	void setViewEnabled(View* view, bool enabled) override;
 
 private:
+	void handleMessage(MessageFocusView* message) override;
 	void handleMessage(MessageRefreshUI* message) override;
 
 	const Id m_tabId;
@@ -40,4 +46,4 @@ private:
 	ScreenSearchSender* m_screenSearchSender;
 };
 
-#endif // TAB_H
+#endif	  // TAB_H

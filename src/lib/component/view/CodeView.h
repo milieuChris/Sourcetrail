@@ -3,10 +3,10 @@
 
 #include <memory>
 
-#include "ErrorInfo.h"
-#include "LocationType.h"
 #include "CodeScrollParams.h"
 #include "CodeSnippetParams.h"
+#include "ErrorInfo.h"
+#include "LocationType.h"
 #include "ScreenSearchInterfaces.h"
 #include "View.h"
 
@@ -55,7 +55,9 @@ public:
 	virtual void clear() = 0;
 
 	virtual void showSnippets(
-		const std::vector<CodeFileParams> files, const CodeParams params, const CodeScrollParams scrollParams) = 0;
+		const std::vector<CodeFileParams> files,
+		const CodeParams params,
+		const CodeScrollParams scrollParams) = 0;
 
 	virtual void showSingleFile(
 		const CodeFileParams file, const CodeParams params, const CodeScrollParams scrollParams) = 0;
@@ -66,16 +68,20 @@ public:
 
 	virtual bool showsErrors() const = 0;
 
-	virtual void focusTokenIds(const std::vector<Id>& focusedTokenIds) = 0;
-	virtual void defocusTokenIds() = 0;
+	virtual void coFocusTokenIds(const std::vector<Id>& coFocusedTokenIds) = 0;
+	virtual void deCoFocusTokenIds() = 0;
 
 	virtual bool isInListMode() const = 0;
 	virtual void setMode(bool listMode) = 0;
 
 	virtual bool hasSingleFileCached(const FilePath& filePath) const = 0;
 
+	virtual void focus() = 0;
+	virtual void defocus() = 0;
+	virtual bool hasFocus() = 0;
+
 protected:
 	CodeController* getController();
 };
 
-#endif // CODE_VIEW_H
+#endif	  // CODE_VIEW_H
